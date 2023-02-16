@@ -46,6 +46,7 @@ def load_musiccaps(
     limit: int = None,
     num_proc: int = 1,
     writer_batch_size: int = 1000,
+    return_without_audio=False
 ):
     """
     Download the clips within the MusicCaps dataset from YouTube.
@@ -58,6 +59,10 @@ def load_musiccaps(
     """
 
     ds = load_dataset('google/MusicCaps', split='train')
+    
+    if return_without_audio:
+        return ds
+    
     if limit is not None:
         print(f"Limiting to {limit} examples")
         ds = ds.select(range(limit))
