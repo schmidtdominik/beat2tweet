@@ -18,7 +18,6 @@ from pathlib import Path
 
 import torch.nn as nn
 import tarfile
-import sys
 import librosa
 
 # Jamendo tags in order
@@ -87,7 +86,7 @@ for tar in tqdm.tqdm(range(100)):
     # Define a hook function to store the activations in variable embedding
     def hook(module, input, output):
         global activations
-        activations.append(output.numpy(force=True)[0])
+        activations.append(output.detach().numpy()[0])
 
     dense1 = hcnn.dense1
     handle = dense1.register_forward_hook(hook)
@@ -126,7 +125,9 @@ for tar in tqdm.tqdm(range(100)):
 
               activations.clear()
         
-        except:  continue
+        except Exception as e:  
+            print(f"Error with {mp3_file}, {e}")
+            continue
 
     handle.remove()
     
