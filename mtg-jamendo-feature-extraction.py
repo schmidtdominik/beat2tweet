@@ -2,28 +2,27 @@
 #!git clone https://github.com/minzwon/sota-music-tagging-models.git
 #!pip install librosa==0.10
 
+print('A', flush=True)
+
 import os
-import tqdm, torch
+import torch
 import sys
 sys.path.insert(1, './sota-music-tagging-models/training')
 
 import model
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import json
 
-import subprocess
-from pathlib import Path
-
-import torch.nn as nn
-import tarfile
 import librosa
+
+print('a')
+
 
 # Jamendo tags in order
 JAMENDO_TAGS = np.array(['genre---alternative','genre---ambient','genre---atmospheric','genre---chillout','genre---classical','genre---dance','genre---downtempo','genre---easylistening','genre---electronic','genre---experimental','genre---folk','genre---funk','genre---hiphop','genre---house','genre---indie','genre---instrumentalpop','genre---jazz','genre---lounge','genre---metal','genre---newage','genre---orchestral','genre---pop','genre---popfolk','genre---poprock','genre---reggae','genre---rock','genre---soundtrack','genre---techno','genre---trance','genre---triphop','genre---world','instrument---acousticguitar','instrument---bass','instrument---computer','instrument---drummachine','instrument---drums','instrument---electricguitar','instrument---electricpiano','instrument---guitar','instrument---keyboard','instrument---piano','instrument---strings','instrument---synthesizer','instrument---violin','instrument---voice','mood/theme---emotional','mood/theme---energetic','mood/theme---film','mood/theme---happy','mood/theme---relaxing'])
 
-FOLDER_PATH = lambda i: f"{i:02d}/"
+FOLDER_PATH = lambda i: f"../{i:02d}/"
 METADATA_PATH = "raw_30s_cleantags.tsv"
 
 pretrain_dataset = "jamendo" # mtat, msd or jamendo
@@ -69,69 +68,77 @@ with open(METADATA_PATH, 'r') as f_in, open(FIXED_METADATA_PATH, 'w') as f_out:
 
 metadata = pd.read_csv(FIXED_METADATA_PATH, sep="\t")
 
-for tar in tqdm.tqdm(range(100)):
+tar = int(sys.argv[1])-1
 
-    print(f"Starting file {tar:02d}")
+print(f"Starting file {tar:02d}")
 
-    # Load tags from metadata
-    tar_metadata = metadata[metadata.PATH.str[:2]==f"{tar:02d}"]
-    metadata_tags = {x.PATH.split("/")[1].split(".")[0]: x.TAGS.split(",") for i, x in tar_metadata.iterrows()}
+# Load tags from metadata
+tar_metadata = metadata[metadata.PATH.str[:2]==f"{tar:02d}"]
+metadata_tags = {x.PATH.split("/")[1].split(".")[0]: x.TAGS.split(",") for i, x in tar_metadata.iterrows()}
 
-    folder = FOLDER_PATH(tar)
+folder = FOLDER_PATH(tar)
+try:
+    mp3_files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith('.mp3')]
+except:
+    print(f"Error finding {f}.")
+
+# Define a hook function to store the activations in variable embedding
+def hook(module, input, output):
+    global activations
+    activations.append(output.detach().numpy()[0])
+
+dense1 = hcnn.dense1
+handle = dense1.register_forward_hook(hook)
+
+activations = []
+embedding = {}
+tags = {}
+tag_scores = {}
+
+samples_len = T * SR
+
+# Load each MP3 file as a NumPy array
+for mp3_file in (mp3_files):
+    print(mp3_file)
+
     try:
-        mp3_files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith('.mp3')]
-    except:
-        print(f"Error finding {f}.")
+        array, sr = librosa.load(mp3_file, sr=SR)
 
-    # Define a hook function to store the activations in variable embedding
-    def hook(module, input, output):
-        global activations
-        activations.append(output.detach().numpy()[0])
+        audio_id = mp3_file.split("/")[-1][:-8]
+        audio_len = array.shape[0]
+        song_tags = [tag.strip() for tag in metadata_tags[audio_id]]
 
-    dense1 = hcnn.dense1
-    handle = dense1.register_forward_hook(hook)
+        # extract N samples of T seconds evenly spread across the audio
+        sample_starts = ((audio_len-samples_len)*np.linspace(0.05, 0.95, N)).astype(int)
 
-    activations = []
-    embedding = {}
-    tags = {}
+        # for each extracted sample from the audio file
+        for i_start, s in enumerate(sample_starts):
+            sample = torch.tensor(array[s:s + samples_len])
+            batched_sample = torch.stack([sample[:80000], sample[-80000:]]).to(device)
 
-    samples_len = T * SR
+            output = hcnn(batched_sample)
+            # sample_tags = get_top_tags(output[0]+output[1], k=5, threshold=.3)
 
-    # Load each MP3 file as a NumPy array
-    for mp3_file in tqdm.tqdm(mp3_files):
+            # sample id is "audio_id"_"start_timestep" (with SR=16000)
+            embedding[f"{audio_id}_{s}"] = np.concatenate(activations)
+            tags[f"{audio_id}_{s}"] = song_tags
+            tag_scores[f"{audio_id}_{s}"] = output.detach().flatten().numpy()
+            # tags[f"{audio_id}_{s}"] = list(set(song_tags+sample_tags))
 
-        try:
-            array, sr = librosa.load(mp3_file, sr=SR)
+            activations.clear()
 
-            audio_id = mp3_file.split("/")[-1][:-8]
-            audio_len = array.shape[0]
-            song_tags = [tag.strip() for tag in metadata_tags[audio_id]]
-            
-            # extract N samples of T seconds evenly spread across the audio
-            sample_starts = ((audio_len-samples_len)*np.linspace(0.05, 0.95, N)).astype(int)
-            
-            # for each extracted sample from the audio file
-            for i_start, s in enumerate(sample_starts):
+    except Exception as e:
+        print(f"Error with {mp3_file}, {e}")
+        continue
 
-              sample = torch.tensor(array[s:s+samples_len])
-              batched_sample = torch.stack([sample[:80000], sample[-80000:]]).to(device)
+handle.remove()
 
-              output = hcnn(batched_sample)
-              sample_tags = get_top_tags(output[0]+output[1], k=5, threshold=.3)
+print('Writing output!')
 
-              # sample id is "audio_id"_"start_timestep" (with SR=16000)
-              embedding[f"{audio_id}_{s}"] = np.concatenate(activations)
-              tags[f"{audio_id}_{s}"] = list(set(song_tags+sample_tags))
+# store tags and embeddings
+with open(f'jam_embeddings/tags_{tar:02d}.json', 'w') as f:
+    json.dump(tags, f)
+np.save(f'jam_embeddings/tag_scores_{tar:02d}.npy', tag_scores)
+np.save(f'jam_embeddings/embeddings_{tar:02d}.npy', embedding)
 
-              activations.clear()
-        
-        except Exception as e:  
-            print(f"Error with {mp3_file}, {e}")
-            continue
-
-    handle.remove()
-    
-    # store tags and embeddings 
-    with open(f'tags_{tar:02d}.json', 'w') as f:
-        json.dump(tags, f)
-    np.save(f'embeddings_{tar:02d}.npy', embedding)
+print('DONE!')
