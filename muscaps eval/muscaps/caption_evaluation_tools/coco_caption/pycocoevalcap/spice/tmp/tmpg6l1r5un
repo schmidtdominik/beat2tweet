@@ -1,0 +1,16 @@
+[
+  {
+    "image_id": 0,
+    "test": "<sos> this is a classical music piece there is a <unk> of <unk> <unk> and <unk> there is a <unk> and <unk> and",
+    "refs": [
+      "<sos> this song is a classical composition played on a harpsichord this features the notes played on the higher register and the bass <eos>"
+    ]
+  },
+  {
+    "image_id": 1,
+    "test": "<sos> this song contains a male voice singing in a higher register along with a piano playing chords in the background the song",
+    "refs": [
+      "<sos> the low quality recording features a traditional pop song that consists of harmonized vocals singing over breathy flute melody groovy bass wooden <eos>"
+    ]
+  }
+]
