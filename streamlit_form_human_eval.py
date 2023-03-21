@@ -28,16 +28,16 @@ st.title("Beat2Tweet Evaluation Form")
 
 st.text("Please listen to the below audio recording and rank the captions from 1(worst suited) to 5 (best suited).")
 
-with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_gpt2_notag_chataug.json') as f:
+with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_lstm_noattn_chataug.json') as f:
     data_preds_gpt2_notag_chataug = json.load(f)
 
-with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_gpt2_notag_noaug.json') as f:
+with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_lstm_noattn_noaug.json') as f:
     data_preds_gpt2_notag_noaug = json.load(f)
 
-with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_lstm_attn_no_tag_no_aug.json') as f:
+with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_lstm_attn_noaug.json') as f:
     data_preds_lstm_attn_no_tag_no_aug = json.load(f)
 
-with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_lstm_no_attn_no_tag_no_aug.json') as f:
+with open('/Users/corinacaraconcea/streamlit_nlp/outputs/preds_lstm_noattn_noaug.json') as f:
     data_preds_lstm_no_attn_no_tag_no_aug = json.load(f)
 
 # with open('outputs/preds_notag_noaug.json') as f:
