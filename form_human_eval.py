@@ -85,14 +85,14 @@ def load_data():
     random.shuffle(models_list)
     print(models_list)
 
-    return  audio_file, captions,models_list
+    return  audio_file, yt_idx, captions, models_list
 
 
 # Define a function to create the form
-def create_form(audio_file,captions,models_list):
+def create_form(audio_file, yt_idx, captions, models_list):
     with st.form("my_form"):
         # Create an empty DataFrame to hold the rankings
-        rankings_df = pd.DataFrame(columns=["Model", "Ranking"])
+        rankings_df = pd.DataFrame(columns=["Model", "Ranking", "Song_ID"])
         
         # Display the audio file
         audio_bytes = open(audio_file, "rb").read()
@@ -105,7 +105,8 @@ def create_form(audio_file,captions,models_list):
             ranking = st.slider("Rank this caption", 1, 3, key=model)
             rankings_df = rankings_df.append({
                 "Model": model,
-                "Ranking": ranking
+                "Ranking": ranking,
+                "Song_ID": yt_idx
             }, ignore_index=True)
         
         # Submit the form
@@ -120,8 +121,8 @@ def create_form(audio_file,captions,models_list):
                 rankings_df.to_csv('/Users/corinacaraconcea/streamlit_nlp/rankings.csv', mode = 'a' , header=False,index=False)
 
 # Load the data
-audio_file,captions_df,models_list = load_data()
+audio_file, yt_idx, captions_df, models_list = load_data()
 
 # Create the form
-create_form(audio_file, captions_df,models_list)
+create_form(audio_file, yt_idx, captions_df, models_list)
 
