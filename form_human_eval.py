@@ -72,6 +72,8 @@ def load_data():
     preds_lstm_attn_noaug = data_preds_lstm_attn_noaug[lstm_keys[1]][random_idx]
     lstm_yt_dx = data_preds_lstm_attn_noaug[lstm_keys[2]][random_idx]
     print(lstm_yt_dx)
+    
+    assert lstm_yt_dx == yt_idx
 
     captions["gpt2_enc_noaug"] = preprocessing_remove_unk(preds_gpt2_enc_noaug)
     captions["gpt2_enc_chataug"] = preprocessing_remove_unk(preds_gpt2_enc_chataug)
