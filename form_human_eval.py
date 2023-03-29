@@ -18,21 +18,12 @@ def preprocessing_remove_unk(text_input):
 
     # split into words
     desc = desc.split(' ')
-    
-    try: 
-        # remove <unk> tokens
-        desc.remove("<unk>")
-    except ValueError:
-        desc = desc
-    try: 
-        # remove <unk> tokens
-        desc.remove("unk")
-    except ValueError:
-        desc = desc
-        
     # remove the punctuations
     text_no_punctuation = [word.translate(table) for word in desc]
-
+    
+    unk_list = ['unk']
+    text_no_punctuation= [word for word in text_no_punctuation if word not in unk_list]
+        
     # join the caption words
     caption = ' '.join(text_no_punctuation)
     
